@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REDLINE ARENA</title>
+<style>
+body {
+  margin: 0;
+  background: #090909;
+  color: white;
+  font-family: Arial;
+  text-align: center;
+}
+h1 {
+  color: red;
+  font-size: 48px;
+  margin-top: 80px;
+}
+button {
+  background: red;
+  color: white;
+  border: 0;
+  padding: 16px 28px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 8px;
+}
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+</style>
+</head>
+<body>
+<h1>REDLINE ARENA</h1>
+<p>THE BATTLE STARTS HERE.</p>
+<button onclick="startGame()">ENTER ARENA</button>
+<p id="status">PROTOTYPE 0.1</p>
+<script>
+function startGame() {
+  document.getElementById("status").innerText =
+    "ARENA INITIALIZING...";
+}
+</script>
+</body>
+</html>
