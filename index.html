@@ -6,19 +6,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>REDLINE ARENA</title>
 <style>
-body{margin:0;overflow:hidden;background:#080808;color:white;font-family:Arial}
+*{box-sizing:border-box}
+body{
+ margin:0;overflow:hidden;background:#080808;color:white;
+ font-family:Arial,sans-serif
+}
 #enter{
  position:fixed;z-index:5;top:40%;left:50%;
  transform:translate(-50%,-50%);
  background:#e51b35;color:white;border:3px solid white;
  border-radius:16px;padding:24px 42px;font-size:30px;
- font-weight:bold;box-shadow:0 0 25px #ff1735;
+ font-weight:bold;box-shadow:0 0 25px #ff1735
 }
 #status{
  position:fixed;z-index:5;bottom:15px;width:100%;
  text-align:center;pointer-events:none;font-weight:bold;
- text-shadow:0 0 8px black;
+ text-shadow:0 0 8px black
 }
+canvas{display:block}
 </style>
 </head>
 <body>
@@ -29,15 +34,19 @@ body{margin:0;overflow:hidden;background:#080808;color:white;font-family:Arial}
 import * as THREE from
 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
+// ===================================
+// BASIC SETUP
+// ===================================
+
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x090b12);
-scene.fog=new THREE.Fog(0x090b12,12,35);
+scene.fog=new THREE.Fog(0x090b12,18,45);
 
 const playerRig=new THREE.Group();
 scene.add(playerRig);
 
 const camera=new THREE.PerspectiveCamera(
- 70,innerWidth/innerHeight,0.1,100
+ 70,innerWidth/innerHeight,.1,100
 );
 camera.position.set(0,1.6,2);
 playerRig.add(camera);
@@ -46,6 +55,8 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.xr.enabled=true;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(0xffffff,0x333344,2));
@@ -54,17 +65,24 @@ const light=new THREE.PointLight(0xff1735,35,25);
 light.position.set(0,4,-3);
 scene.add(light);
 
+// ===================================
 // ARENA
+// ===================================
+
 const floor=new THREE.Mesh(
  new THREE.PlaneGeometry(18,18),
- new THREE.MeshStandardMaterial({color:0x20232b})
+ new THREE.MeshStandardMaterial({
+  color:0x20232b,
+  roughness:.9
+ })
 );
 floor.rotation.x=-Math.PI/2;
 floor.position.z=-2;
+floor.receiveShadow=true;
 scene.add(floor);
 
 const grid=new THREE.GridHelper(18,36,0xff1735,0x444455);
-grid.position.set(0,0.02,-2);
+grid.position.set(0,.02,-2);
 scene.add(grid);
 
 function wall(x,y,z,w,h,d){
@@ -73,138 +91,207 @@ function wall(x,y,z,w,h,d){
   new THREE.MeshStandardMaterial({color:0x252832})
  );
  m.position.set(x,y,z);
+ m.receiveShadow=true;
+ m.castShadow=true;
  scene.add(m);
+ return m;
 }
+
 wall(0,2,-11,18,4,.3);
 wall(-9,2,-2,.3,4,18);
 wall(9,2,-2,.3,4,18);
 wall(0,4,-2,18,.3,18);
 
-// COMPUTER
+// ===================================
+// TEXT AND OBJECT HELPERS
+// ===================================
+
 function makeText(message,color="#ffffff"){
  const canvas=document.createElement("canvas");
  canvas.width=1024;
  canvas.height=256;
+
  const ctx=canvas.getContext("2d");
  ctx.fillStyle="#10131c";
  ctx.fillRect(0,0,1024,256);
+
  ctx.fillStyle=color;
- ctx.font="bold 75px Arial";
+ ctx.font="bold 65px Arial";
  ctx.textAlign="center";
  ctx.textBaseline="middle";
  ctx.fillText(message,512,128);
+
  const texture=new THREE.CanvasTexture(canvas);
  texture.colorSpace=THREE.SRGBColorSpace;
  return texture;
 }
 
-const computer=new THREE.Group();
-computer.position.set(0,0,-7);
-scene.add(computer);
-
 function solidBox(w,h,d,color,x,y,z,parent){
  const mesh=new THREE.Mesh(
   new THREE.BoxGeometry(w,h,d),
-  new THREE.MeshStandardMaterial({color})
+  new THREE.MeshStandardMaterial({
+   color,
+   roughness:.8
+  })
  );
  mesh.position.set(x,y,z);
+ mesh.castShadow=true;
+ mesh.receiveShadow=true;
  parent.add(mesh);
  return mesh;
 }
 
+// ===================================
+// COMPUTER
+// ===================================
+
+const computer=new THREE.Group();
+computer.position.set(0,0,-7);
+scene.add(computer);
+
+// Desk
 solidBox(2.8,.25,1.2,0x33343b,0,.9,0,computer);
 solidBox(.25,.9,.25,0x17191f,0,.4,0,computer);
-solidBox(2,1.35,.12,0x111827,0,1.75,-.25,computer);
+
+// Raised monitor
+solidBox(2,1.55,.12,0x111827,0,2.05,-.25,computer);
 
 const screenFace=new THREE.Mesh(
- new THREE.PlaneGeometry(1.85,1.2),
- new THREE.MeshBasicMaterial({map:makeText("REDLINE ARENA","#ff263f")})
+ new THREE.PlaneGeometry(1.85,1.4),
+ new THREE.MeshBasicMaterial({
+  map:makeText("REDLINE ARENA","#ff263f")
+ })
 );
-screenFace.position.set(0,1.75,-.18);
+screenFace.position.set(0,2.05,-.18);
 computer.add(screenFace);
 
 const menuButtons=[];
 
 function screenMessage(message){
- screenFace.material.map.dispose();
+ if(screenFace.material.map){
+  screenFace.material.map.dispose();
+ }
  screenFace.material.map=makeText(message,"#ff4055");
  screenFace.material.needsUpdate=true;
 }
 
 function clearMenu(){
- for(const b of menuButtons)computer.remove(b);
+ for(const b of menuButtons){
+  computer.remove(b);
+ }
  menuButtons.length=0;
 }
 
 function addComputerButton(label,y,action){
- const button=solidBox(1.65,.27,.09,0x9d1025,0,y,-.08,computer);
+ const button=solidBox(
+  1.65,.27,.09,0x9d1025,0,y,-.08,computer
+ );
+
  button.userData.action=action;
 
  const labelMesh=new THREE.Mesh(
   new THREE.PlaneGeometry(1.5,.22),
   new THREE.MeshBasicMaterial({map:makeText(label)})
  );
+
  labelMesh.position.z=.052;
  button.add(labelMesh);
  menuButtons.push(button);
 }
 
+let gameMode="MENU";
+
 function showPrivateMenu(){
  clearMenu();
  screenMessage("PRIVATE ROOMS");
 
- addComputerButton("CREATE ROOM CODE",1.35,()=>{
+ addComputerButton("CREATE ROOM CODE",1.7,()=>{
   const code=String(Math.floor(1000+Math.random()*9000));
   screenMessage("YOUR CODE: "+code);
-  document.getElementById("status").textContent=
-   "YOUR PRIVATE CODE: "+code;
+  setStatus("YOUR PRIVATE CODE: "+code);
  });
 
- addComputerButton("ENTER FRIEND CODE",1.02,()=>{
+ addComputerButton("ENTER FRIEND CODE",1.35,()=>{
   const code=prompt("Enter your friend's room code:");
-  if(code){
-   screenMessage("JOINING: "+code);
-   document.getElementById("status").textContent=
-    "PRIVATE ROOM "+code+" — SERVER NEEDED TO CONNECT";
+
+  if(code && code.trim()){
+   screenMessage("JOINING: "+code.trim());
+   setStatus(
+    "ROOM "+code.trim()+" — SERVER CONNECTION NEEDED"
+   );
   }
  });
 
- addComputerButton("BACK",.69,showMainMenu);
+ addComputerButton("BACK",1.0,showMainMenu);
 }
 
 function showMainMenu(){
  clearMenu();
  screenMessage("CHOOSE YOUR GAME");
+ gameMode="MENU";
 
- addComputerButton("PRACTICE MODE",1.35,()=>{
+ addComputerButton("PRACTICE MODE",1.7,()=>{
+  gameMode="PRACTICE";
   screenMessage("PRACTICE MODE");
-  document.getElementById("status").textContent="PRACTICE MODE";
+  setStatus("PRACTICE MODE — WALK AND JUMP!");
  });
 
- addComputerButton("PUBLIC MODE",1.02,()=>{
-  screenMessage("SEARCHING PUBLIC...");
-  document.getElementById("status").textContent=
-   "PUBLIC SERVER CONNECTION NOT CONFIGURED YET";
+ addComputerButton("PUBLIC MODE",1.35,()=>{
+  gameMode="PUBLIC";
+  screenMessage("PUBLIC SERVER");
+  setStatus("PUBLIC MULTIPLAYER NEEDS A SERVER");
  });
 
- addComputerButton("PRIVATE MODE",.69,showPrivateMenu);
+ addComputerButton("PRIVATE MODE",1.0,showPrivateMenu);
 }
 
 showMainMenu();
 computer.visible=false;
 
 // ===================================
-// GORILLA PLAYER BODY AND ARMS
+// REAL SOLID SHELF
+// ===================================
+
+const shelf=new THREE.Group();
+shelf.position.set(-3.2,0,-4);
+scene.add(shelf);
+
+// Platform top
+const shelfWidth=2.8;
+const shelfDepth=1.5;
+const shelfTop=1.0;
+
+solidBox(
+ shelfWidth,.2,shelfDepth,
+ 0x55545d,0,.9,0,shelf
+);
+
+// Shelf edge
+solidBox(
+ shelfWidth+.06,.08,shelfDepth+.06,
+ 0xff1735,0,.78,0,shelf
+);
+
+// Four legs
+solidBox(.18,.8,.18,0x292b33,-1.2,.4,-.6,shelf);
+solidBox(.18,.8,.18,0x292b33,1.2,.4,-.6,shelf);
+solidBox(.18,.8,.18,0x292b33,-1.2,.4,.6,shelf);
+solidBox(.18,.8,.18,0x292b33,1.2,.4,.6,shelf);
+
+// ===================================
+// PLAYER BODY
 // ===================================
 
 const bodyMaterial=new THREE.MeshStandardMaterial({
- color:0x9b1730,roughness:.8
-});
-const handMaterial=new THREE.MeshStandardMaterial({
- color:0xd12b45,roughness:.8
+ color:0x9b1730,
+ roughness:.8
 });
 
-// Torso
+const handMaterial=new THREE.MeshStandardMaterial({
+ color:0xd12b45,
+ roughness:.8
+});
+
 const torso=new THREE.Mesh(
  new THREE.SphereGeometry(.32,20,16),
  bodyMaterial
@@ -212,14 +299,12 @@ const torso=new THREE.Mesh(
 torso.scale.set(1,1.35,.75);
 scene.add(torso);
 
-// Head
 const head=new THREE.Mesh(
  new THREE.SphereGeometry(.23,20,16),
  bodyMaterial
 );
 scene.add(head);
 
-// Arm and hand objects
 const arms=[];
 
 function makeArm(){
@@ -227,13 +312,20 @@ function makeArm(){
   new THREE.CylinderGeometry(.105,.15,1,12),
   bodyMaterial
  );
+
  const hand=new THREE.Mesh(
   new THREE.SphereGeometry(.16,16,12),
   handMaterial
  );
+
  scene.add(arm);
  scene.add(hand);
- return {arm,hand,previous:new THREE.Vector3(),hasPrevious:false,active:false};
+
+ return {
+  arm,
+  hand,
+  active:false
+ };
 }
 
 arms.push(makeArm());
@@ -241,15 +333,20 @@ arms.push(makeArm());
 
 function updateSegment(mesh,start,end){
  const direction=new THREE.Vector3().subVectors(end,start);
+
  mesh.position.copy(start).add(end).multiplyScalar(.5);
  mesh.scale.y=direction.length();
+
  mesh.quaternion.setFromUnitVectors(
   new THREE.Vector3(0,1,0),
   direction.normalize()
  );
 }
 
+// ===================================
 // CONTROLLERS
+// ===================================
+
 const controllers=[];
 
 for(let i=0;i<2;i++){
@@ -263,6 +360,7 @@ for(let i=0;i<2;i++){
   ]),
   new THREE.LineBasicMaterial({color:0xff263f})
  );
+
  controller.add(laser);
 
  controller.addEventListener("select",()=>{
@@ -272,20 +370,37 @@ for(let i=0;i<2;i++){
  controllers.push(controller);
 }
 
+// ===================================
+// STATUS
+// ===================================
+
+function setStatus(message){
+ document.getElementById("status").textContent=message;
+}
+
+// ===================================
 // COMPUTER INTERACTION
+// ===================================
+
 const raycaster=new THREE.Raycaster();
 
+const headPosition=new THREE.Vector3();
+const deskPosition=new THREE.Vector3();
+const handPosition=new THREE.Vector3();
+const shoulder=new THREE.Vector3();
+
 function computerDistance(){
- const headPosition=new THREE.Vector3();
- const deskPosition=new THREE.Vector3();
- renderer.xr.getCamera(camera).getWorldPosition(headPosition);
- computer.getWorldPosition(deskPosition);
+ const view=renderer.xr.getCamera(camera);
+ view.getWorldPosition(headPosition);
+
+ deskPosition.set(0,1.6,-7);
  return headPosition.distanceTo(deskPosition);
 }
 
 function checkController(controller){
  if(!renderer.xr.isPresenting)return;
- if(computerDistance()>2.2)return;
+
+ if(computerDistance()>3.5)return;
 
  const origin=new THREE.Vector3();
  const direction=new THREE.Vector3();
@@ -293,69 +408,174 @@ function checkController(controller){
 
  controller.getWorldPosition(origin);
  controller.getWorldQuaternion(rotation);
+
  direction.set(0,0,-1).applyQuaternion(rotation);
 
  raycaster.set(origin,direction);
- raycaster.far=4;
+ raycaster.far=5;
 
  const hits=raycaster.intersectObjects(menuButtons,false);
+
  if(hits.length && hits[0].object.userData.action){
   hits[0].object.userData.action();
  }
 }
 
-// VR
+// ===================================
+// HEIGHT CALIBRATION PANEL
+// ===================================
+
+const calibrationPanel=new THREE.Mesh(
+ new THREE.PlaneGeometry(1.8,.45),
+ new THREE.MeshBasicMaterial({
+  map:makeText("TOUCH A CONTROLLER TO THE FLOOR","#ff4055")
+ })
+);
+
+scene.add(calibrationPanel);
+
+calibrationPanel.visible=false;
+
+let calibrated=false;
+let playerHeight=1.6;
+
+function updateCalibrationText(message){
+ if(calibrationPanel.material.map){
+  calibrationPanel.material.map.dispose();
+ }
+
+ calibrationPanel.material.map=makeText(message,"#ff4055");
+ calibrationPanel.material.needsUpdate=true;
+}
+
+function positionCalibrationPanel(){
+ const view=renderer.xr.getCamera(camera);
+ const pos=new THREE.Vector3();
+ const dir=new THREE.Vector3();
+
+ view.getWorldPosition(pos);
+ view.getWorldDirection(dir);
+
+ calibrationPanel.position.copy(pos).addScaledVector(dir,1.5);
+ calibrationPanel.position.y=pos.y;
+ calibrationPanel.lookAt(pos);
+}
+
+// ===================================
+// VR START
+// ===================================
+
 document.getElementById("enter").addEventListener("click",async()=>{
  try{
   if(!navigator.xr){
-   document.getElementById("status").textContent="OPEN THIS GAME IN QUEST BROWSER";
+   setStatus("OPEN THIS GAME IN QUEST BROWSER");
    return;
   }
 
   const supported=await navigator.xr.isSessionSupported("immersive-vr");
+
   if(!supported){
-   document.getElementById("status").textContent="VR NOT SUPPORTED";
+   setStatus("VR NOT SUPPORTED");
    return;
   }
 
   const session=await navigator.xr.requestSession("immersive-vr",{
-   optionalFeatures:["local-floor","hand-tracking"]
+   requiredFeatures:["local-floor"],
+   optionalFeatures:["hand-tracking"]
   });
 
   renderer.xr.setReferenceSpaceType("local-floor");
   await renderer.xr.setSession(session);
 
   playerRig.position.set(0,0,0);
+
   computer.visible=true;
   showMainMenu();
 
+  calibrated=false;
+  playerHeight=1.6;
+
+  calibrationPanel.visible=true;
+  updateCalibrationText("TOUCH A CONTROLLER TO THE FLOOR");
+  positionCalibrationPanel();
+
   document.getElementById("enter").style.display="none";
-  document.getElementById("status").textContent=
-   "WELCOME — USE YOUR ARMS TO MOVE!";
+
+  setStatus("HEIGHT CALIBRATION — TOUCH A CONTROLLER TO THE FLOOR");
 
   session.addEventListener("end",()=>{
    computer.visible=false;
+   calibrationPanel.visible=false;
    document.getElementById("enter").style.display="block";
-   document.getElementById("status").textContent="REDLINE ARENA — READY";
+   setStatus("REDLINE ARENA — READY");
   });
 
  }catch(error){
-  document.getElementById("status").textContent="VR ERROR: "+error.message;
+  setStatus("VR ERROR: "+error.message);
  }
 });
 
 // ===================================
-// ARM-SWING MOVEMENT
+// HEIGHT DETECTION
 // ===================================
 
 const worldHand=new THREE.Vector3();
-const headPosition=new THREE.Vector3();
-const shoulder=new THREE.Vector3();
-const handPosition=new THREE.Vector3();
-const movement=new THREE.Vector3();
 
-let lastTime=performance.now();
-let nearComputer=false;
+function calibrateHeight(){
+ if(calibrated || !renderer.xr.isPresenting)return;
+
+ const view=renderer.xr.getCamera(camera);
+ view.getWorldPosition(headPosition);
+
+ // Find a controller that is touching the floor.
+ for(const controller of controllers){
+  controller.getWorldPosition(worldHand);
+
+  if(worldHand.y<=.14){
+   const floorY=worldHand.y;
+   const measuredHeight=headPosition.y-floorY;
+
+   // Correct a small floor tracking offset.
+   playerRig.position.y-=floorY;
+
+   playerHeight=THREE.MathUtils.clamp(
+    measuredHeight,1.0,2.3
+   );
+
+   calibrated=true;
+   calibrationPanel.visible=false;
+
+   setStatus(
+    "HEIGHT CALIBRATED: "+
+    playerHeight.toFixed(2)+" METERS"
+   );
+
+   return;
+  }
+ }
+}
+
+// ===================================
+// WALKING, JUMPING AND COLLISION
+// ===================================
+
+let verticalVelocity=0;
+let grounded=true;
+let jumpWasDown=false;
+
+const gravity=9.8;
+const jumpPower=4.2;
+const walkSpeed=2.8;
+
+function isOnShelf(x,z){
+ const localX=x-shelf.position.x;
+ const localZ=z-shelf.position.z;
+
+ return (
+  Math.abs(localX)<shelfWidth/2 &&
+  Math.abs(localZ)<shelfDepth/2
+ );
+}
 
 function movePlayer(delta){
  if(!renderer.xr.isPresenting)return;
@@ -363,21 +583,39 @@ function movePlayer(delta){
  const session=renderer.xr.getSession();
  if(!session)return;
 
- let stickX=0,stickY=0;
+ let stickX=0;
+ let stickY=0;
+ let jumpDown=false;
 
+ // Read controller input by handedness.
  for(const source of session.inputSources){
-  if(source.handedness==="left" && source.gamepad){
+  if(!source.gamepad)continue;
+
+  if(source.handedness==="left"){
    const axes=source.gamepad.axes;
-   stickX=axes[axes.length-2]||0;
-   stickY=axes[axes.length-1]||0;
-   break;
+
+   if(axes.length>=2){
+    stickX=axes[axes.length-2]||0;
+    stickY=axes[axes.length-1]||0;
+   }
+  }
+
+  if(source.handedness==="right"){
+   const buttons=source.gamepad.buttons;
+
+   // A button or right thumbstick click.
+   jumpDown=!!(
+    (buttons[4] && buttons[4].pressed) ||
+    (buttons[3] && buttons[3].pressed)
+   );
   }
  }
 
- // Thumbstick walking fallback
+ // Left thumbstick walking.
  if(Math.abs(stickX)>.15 || Math.abs(stickY)>.15){
   const view=renderer.xr.getCamera(camera);
   const forward=new THREE.Vector3();
+
   view.getWorldDirection(forward);
   forward.y=0;
   forward.normalize();
@@ -386,62 +624,85 @@ function movePlayer(delta){
    .crossVectors(forward,new THREE.Vector3(0,1,0))
    .normalize();
 
-  playerRig.position.addScaledVector(forward,-stickY*2.5*delta);
-  playerRig.position.addScaledVector(right,stickX*2.5*delta);
+  playerRig.position.addScaledVector(
+   forward,-stickY*walkSpeed*delta
+  );
+
+  playerRig.position.addScaledVector(
+   right,stickX*walkSpeed*delta
+  );
  }
 
- // Gorilla arm-swing movement
- for(let i=0;i<2;i++){
-  const controller=controllers[i];
-  const arm=arms[i];
-  const source=session.inputSources[i];
+ // Jump button.
+ if(jumpDown && !jumpWasDown && grounded){
+  verticalVelocity=jumpPower;
+  grounded=false;
+ }
 
-  arm.active=!!source;
+ jumpWasDown=jumpDown;
 
-  if(!arm.active){
-   arm.arm.visible=false;
-   arm.hand.visible=false;
-   arm.hasPrevious=false;
-   continue;
-  }
+ // Gravity.
+ const oldFeetY=playerRig.position.y;
 
-  controller.getWorldPosition(worldHand);
+ verticalVelocity-=gravity*delta;
+ playerRig.position.y+=verticalVelocity*delta;
 
-  const touchingFloor=worldHand.y<.28;
-  const touchingWall=
-   Math.abs(worldHand.x)>8.25 ||
-   worldHand.z<-10.25 ||
-   worldHand.z>6.25;
+ // Find the player's horizontal position.
+ const view=renderer.xr.getCamera(camera);
+ view.getWorldPosition(headPosition);
 
-  if(arm.hasPrevious && (touchingFloor || touchingWall)){
-   movement.subVectors(worldHand,arm.previous);
-   movement.y=0;
+ const shelfBounds=isOnShelf(
+  headPosition.x,
+  headPosition.z
+ );
 
-   // Push the body in the opposite direction
-   const strength=1.15;
-   movement.multiplyScalar(-strength);
+ // Land on the shelf when falling onto its top.
+ if(
+  shelfBounds &&
+  oldFeetY>=shelfTop-.02 &&
+  playerRig.position.y<=shelfTop &&
+  verticalVelocity<=0
+ ){
+  playerRig.position.y=shelfTop;
+  verticalVelocity=0;
+  grounded=true;
+ }
 
-   const maxMove=3.5*delta;
-   if(movement.length()>maxMove)movement.setLength(maxMove);
+ // Floor collision.
+ if(playerRig.position.y<=0){
+  playerRig.position.y=0;
+  verticalVelocity=0;
+  grounded=true;
+ }
 
-   playerRig.position.add(movement);
-  }
-
-  arm.previous.copy(worldHand);
-  arm.hasPrevious=true;
+ // If standing on shelf, stay on top.
+ if(
+  shelfBounds &&
+  Math.abs(playerRig.position.y-shelfTop)<.02 &&
+  verticalVelocity<=0
+ ){
+  playerRig.position.y=shelfTop;
+  verticalVelocity=0;
+  grounded=true;
  }
 }
 
-// BODY AND ARM VISUAL TRACKING
+// ===================================
+// BODY AND ARM TRACKING
+// ===================================
+
 function updateBody(){
  if(!renderer.xr.isPresenting)return;
 
  const view=renderer.xr.getCamera(camera);
  view.getWorldPosition(headPosition);
 
- // Torso follows the player's headset position.
+ // Keep the virtual body upright below the headset.
  torso.position.copy(headPosition);
- torso.position.y-=.62;
+ torso.position.y-=playerHeight*.37;
+
+ torso.scale.y=1.35*(playerHeight/1.6);
+
  head.position.copy(headPosition);
  head.position.y-=.22;
 
@@ -449,20 +710,15 @@ function updateBody(){
   const controller=controllers[i];
   const arm=arms[i];
 
-  if(!arm.active){
-   arm.arm.visible=false;
-   arm.hand.visible=false;
-   continue;
-  }
+  controller.getWorldPosition(handPosition);
 
+  arm.active=true;
   arm.arm.visible=true;
   arm.hand.visible=true;
 
-  controller.getWorldPosition(handPosition);
-
   shoulder.copy(headPosition);
   shoulder.x+=(i===0?-.25:.25);
-  shoulder.y-=.42;
+  shoulder.y-=playerHeight*.25;
   shoulder.z+=.04;
 
   updateSegment(arm.arm,shoulder,handPosition);
@@ -470,31 +726,54 @@ function updateBody(){
  }
 }
 
-// GAME LOOP
+// ===================================
+// MAIN GAME LOOP
+// ===================================
+
+let lastTime=performance.now();
+let nearComputer=false;
+
 renderer.setAnimationLoop(()=>{
  const now=performance.now();
- const delta=Math.min((now-lastTime)/1000,.05);
+
+ const delta=Math.min(
+  (now-lastTime)/1000,.05
+ );
+
  lastTime=now;
 
- movePlayer(delta);
- updateBody();
-
- if(renderer.xr.isPresenting && computer.visible){
-  const near=computerDistance()<2.2;
-
-  if(near && !nearComputer){
-   document.getElementById("status").textContent=
-    "COMPUTER READY — AIM AND PRESS TRIGGER";
+ if(renderer.xr.isPresenting){
+  if(!calibrated){
+   positionCalibrationPanel();
+   calibrateHeight();
   }
-  if(!near && nearComputer){
-   document.getElementById("status").textContent=
-    "WALK TO THE COMPUTER";
+
+  movePlayer(delta);
+  updateBody();
+
+  if(computer.visible){
+   const near=computerDistance()<3.5;
+
+   if(near && !nearComputer){
+    setStatus(
+     "COMPUTER READY — AIM AND PRESS TRIGGER"
+    );
+   }
+
+   if(!near && nearComputer){
+    setStatus("WALK TO THE COMPUTER");
+   }
+
+   nearComputer=near;
   }
-  nearComputer=near;
  }
 
  renderer.render(scene,camera);
 });
+
+// ===================================
+// RESIZE
+// ===================================
 
 window.addEventListener("resize",()=>{
  camera.aspect=innerWidth/innerHeight;
