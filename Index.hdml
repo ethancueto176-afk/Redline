@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REDLINE ARENA</title>
+
+<style>
+body {
+  margin: 0;
+  background: #090909;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+h1 {
+  color: #ff2038;
+  font-size: 42px;
+  margin-top: 60px;
+}
+
+button {
+  display: block;
+  width: 80%;
+  max-width: 320px;
+  margin: 20px auto;
+  padding: 18px;
+  background: #d71932;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+#status {
+  color: #aaa;
+  margin: 25px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>REDLINE ARENA</h1>
+<p>ENTER THE BATTLE</p>
+
+<button id="enterVR">ENTER VR</button>
+
+<div id="lobby" hidden>
+  <h2>VR LOBBY</h2>
+  <button onclick="alert('Public servers need multiplayer setup!')">
+    JOIN PUBLIC SERVER
+  </button>
+  <button onclick="joinPrivate()">
+    JOIN PRIVATE ROOM
+  </button>
+  <button onclick="alert('Room creation needs multiplayer setup!')">
+    CREATE PRIVATE ROOM
+  </button>
+</div>
+
+<p id="status">WAITING FOR VR...</p>
+
+<script type="module">
+import * as THREE from
+'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x090909);
+
+const camera = new THREE.PerspectiveCamera(
+  70, window.innerWidth / window.innerHeight, 0.1, 100
+);
+camera.position.set(0, 1.6, 3);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 2));
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(20, 20),
+  new THREE.MeshStandardMaterial({ color: 0x222222 })
+);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+const grid = new THREE.GridHelper(20, 20, 0xff2038, 0x444444);
+grid.position.y = 0.02;
+scene.add(grid);
+
+document.getElementById("enterVR").onclick = async () => {
+  try {
+    if (!navigator.xr) {
+      document.getElementById("status").textContent =
+        "WebXR is not supported in this browser.";
+      return;
+    }
+
+    const supported = await navigator.xr.isSessionSupported(
+      "immersive-vr"
+    );
+
+    if (!supported) {
+      document.getElementById("status").textContent =
+        "VR is not available on this device.";
+      return;
+    }
+
+    const session = await navigator.xr.requestSession(
+      "immersive-vr",
+      { optionalFeatures: ["local-floor", "hand-tracking"] }
+    );
+
+    await renderer.xr.setSession(session);
+
+    document.getElementById("lobby").hidden = false;
+    document.getElementById("status").textContent =
+      "VR CONNECTED — WELCOME TO REDLINE ARENA!";
+  } catch (error) {
+    document.getElementById("status").textContent =
+      "Could not enter VR: " + error.message;
+  }
+};
+
+function joinPrivate() {
+  const code = prompt("ENTER YOUR ROOM CODE:");
+  if (code) alert("Room code entered: " + code +
+    ". Online room connection still needs a server.");
+}
+
+renderer.setAnimationLoop(() => {
+  renderer.render(scene, camera);
+});
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
+</body>
+</html>
