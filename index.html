@@ -7,7 +7,22 @@
 <title>REDLINE ARENA</title>
 <style>
 body{margin:0;overflow:hidden;background:#080808;color:white;font-family:Arial}
-#enter{position:fixed;z-index:5;top:18px;left:50%;transform:translateX(-50%);background:#e51b35;color:white;border:0;border-radius:12px;padding:16px 28px;font-size:20px;font-weight:bold}
+#enter{
+ position:fixed;
+ z-index:9999;
+ top:25px;
+ left:50%;
+ transform:translateX(-50%);
+ background:#ff102f;
+ color:white;
+ border:4px solid white;
+ border-radius:18px;
+ padding:24px 48px;
+ font-size:32px;
+ font-weight:900;
+ box-shadow:0 0 25px #ff102f;
+ cursor:pointer;
+}
 #status{position:fixed;z-index:5;bottom:15px;width:100%;text-align:center;pointer-events:none}
 </style>
 </head>
@@ -36,7 +51,6 @@ const light=new THREE.PointLight(0xff1735,30,20);
 light.position.set(0,4,-3);
 scene.add(light);
 
-// ARENA
 const floor=new THREE.Mesh(
  new THREE.PlaneGeometry(40,40),
  new THREE.MeshStandardMaterial({color:0x171717})
@@ -57,7 +71,6 @@ for(const x of [-6,6]){
  scene.add(wall);
 }
 
-// TEXT
 function makeText(text,color="#ffffff"){
  const canvas=document.createElement("canvas");
  canvas.width=1024;canvas.height=256;
@@ -74,7 +87,6 @@ function makeText(text,color="#ffffff"){
  return texture;
 }
 
-// 3D LOBBY
 const lobby=new THREE.Group();
 lobby.position.set(0,1.55,-2.8);
 scene.add(lobby);
@@ -92,7 +104,6 @@ const title=new THREE.Mesh(
 title.position.set(0,1.25,0.08);
 lobby.add(title);
 
-// STATUS
 const statusCanvas=document.createElement("canvas");
 statusCanvas.width=1024;statusCanvas.height=180;
 const statusCtx=statusCanvas.getContext("2d");
@@ -117,7 +128,6 @@ const statusDisplay=new THREE.Mesh(
 statusDisplay.position.set(0,-1.45,0.09);
 lobby.add(statusDisplay);
 
-// BUTTONS
 const buttons=[];
 
 function makeButton(label,y,action){
@@ -144,7 +154,6 @@ makeButton("CHAOS MODE",-0.18,()=>updateStatus("CHAOS MODE SELECTED!"));
 makeButton("PUBLIC SERVERS",-0.72,()=>updateStatus("ONLINE SERVERS COMING NEXT"));
 makeButton("PRIVATE ROOM",-1.17,()=>updateStatus("PRIVATE ROOMS COMING NEXT"));
 
-// QUEST CONTROLLERS
 const raycaster=new THREE.Raycaster();
 const controllers=[];
 
@@ -185,7 +194,6 @@ for(let i=0;i<2;i++){
  controllers.push(controller);
 }
 
-// MOUSE TEST
 renderer.domElement.addEventListener("click",event=>{
  const pointer=new THREE.Vector2(
   event.clientX/innerWidth*2-1,
@@ -196,7 +204,6 @@ renderer.domElement.addEventListener("click",event=>{
  if(hits.length>0) hits[0].object.userData.action();
 });
 
-// ENTER VR
 document.getElementById("enter").addEventListener("click",async()=>{
  try{
   if(!navigator.xr){
@@ -230,14 +237,12 @@ document.getElementById("enter").addEventListener("click",async()=>{
  }
 });
 
-// RESIZE
 window.addEventListener("resize",()=>{
  camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
 });
 
-// GAME LOOP
 renderer.setAnimationLoop(()=>{
  renderer.render(scene,camera);
 });
