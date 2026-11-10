@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 body{margin:0;overflow:hidden;background:#080808;color:white;font-family:Arial,sans-serif}
 #enter{position:fixed;z-index:5;top:40%;left:50%;transform:translate(-50%,-50%);background:#e51b35;color:white;border:3px solid white;border-radius:16px;padding:24px 42px;font-size:30px;font-weight:bold;box-shadow:0 0 25px #ff1735}
-#status{position:fixed;z-index:5;bottom:15px;width:100%;text-align:center;pointer-events:none;font-weight:bold;text-shadow:0 0 8px black}
+#status{position:fixed;z-index:5;bottom:15px;width:100%;text-align:center;pointer-events:none;font-weight:bold;text-shadow:0 0 8px black;padding:0 12px}
 canvas{display:block}
 </style>
 </head>
@@ -29,17 +29,17 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 // ===================================
-// FIREBASE CONNECTION
+// NEW FIREBASE WEB APP CONNECTION
 // ===================================
 
 const firebaseConfig={
- apiKey:"AIzaSyCv7B_N7XK2KLYhwn8xwHI5It4TS7dMjKQk",
+ apiKey:"AIzaSyCv7B_N_X2K2KLYhwn8xwHI5It4TS7dMjKQk",
  authDomain:"redline-arena.firebaseapp.com",
  projectId:"redline-arena",
  storageBucket:"redline-arena.firebasestorage.app",
  messagingSenderId:"94653220727",
- appId:"1:94653220727:web:54059664614dc6751b4372",
- measurementId:"G-F8KFSJF3J9"
+ appId:"1:94653220727:web:f8d3f1184189bb451b4372",
+ measurementId:"G-8SCPFK600M"
 };
 
 const firebaseApp=initializeApp(firebaseConfig);
@@ -56,9 +56,15 @@ const authReady=signInAnonymously(auth)
  })
  .catch(error=>{
   console.error("Firebase sign-in error:",error);
-  setStatus("FIREBASE ERROR — CHECK AUTHENTICATION");
+  const code=error.code||"unknown";
+  const message=error.message||"No error message provided";
+  setStatus("FIREBASE ERROR ["+code+"]: "+message);
   throw error;
  });
+
+// ===================================
+// PRIVATE ROOM CREATION
+// ===================================
 
 async function createPrivateRoom(){
  try{
@@ -87,10 +93,14 @@ async function createPrivateRoom(){
 
   setStatus("COULD NOT CREATE ROOM — TRY AGAIN");
  }catch(error){
-  console.error(error);
-  setStatus("ROOM ERROR: "+error.message);
+  console.error("Room creation error:",error);
+  setStatus("ROOM ERROR ["+(error.code||"unknown")+"]: "+error.message);
  }
 }
+
+// ===================================
+// JOIN PRIVATE ROOM
+// ===================================
 
 async function joinPrivateRoom(){
  const entered=prompt("Enter your friend's 4-digit room code:");
@@ -128,13 +138,13 @@ async function joinPrivateRoom(){
   screenMessage("ROOM FOUND: "+code);
   setStatus("ROOM FOUND — MULTIPLAYER PLAYER SYNC IS NOT BUILT YET");
  }catch(error){
-  console.error(error);
-  setStatus("JOIN ERROR: "+error.message);
+  console.error("Join room error:",error);
+  setStatus("JOIN ERROR ["+(error.code||"unknown")+"]: "+error.message);
  }
 }
 
 // ===================================
-// BASIC SETUP
+// BASIC THREE.JS SETUP
 // ===================================
 
 const scene=new THREE.Scene();
@@ -157,6 +167,7 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(0xffffff,0x333344,2));
+
 const light=new THREE.PointLight(0xff1735,35,25);
 light.position.set(0,4,-3);
 scene.add(light);
@@ -203,6 +214,7 @@ function makeText(message,color="#ffffff"){
  const canvas=document.createElement("canvas");
  canvas.width=1024;
  canvas.height=256;
+
  const ctx=canvas.getContext("2d");
  ctx.fillStyle="#10131c";
  ctx.fillRect(0,0,1024,256);
@@ -211,6 +223,7 @@ function makeText(message,color="#ffffff"){
  ctx.textAlign="center";
  ctx.textBaseline="middle";
  ctx.fillText(message,512,128);
+
  const texture=new THREE.CanvasTexture(canvas);
  texture.colorSpace=THREE.SRGBColorSpace;
  return texture;
@@ -308,7 +321,7 @@ showMainMenu();
 computer.visible=false;
 
 // ===================================
-// REAL SOLID SHELF
+// SHELF
 // ===================================
 
 const shelf=new THREE.Group();
@@ -322,7 +335,6 @@ const shelfTop=1.0;
 solidBox(shelfWidth,.2,shelfDepth,0x55545d,0,.9,0,shelf);
 solidBox(shelfWidth+.06,.08,shelfDepth+.06,0xff1735,0,.78,0,shelf);
 
-// Four legs
 solidBox(.18,.8,.18,0x292b33,-1.2,.4,-.6,shelf);
 solidBox(.18,.8,.18,0x292b33,1.2,.4,-.6,shelf);
 solidBox(.18,.8,.18,0x292b33,-1.2,.4,.6,shelf);
@@ -348,11 +360,14 @@ function makeArm(){
  const arm=new THREE.Mesh(
   new THREE.CylinderGeometry(.105,.15,1,12),bodyMaterial
  );
+
  const hand=new THREE.Mesh(
   new THREE.SphereGeometry(.16,16,12),handMaterial
  );
+
  scene.add(arm);
  scene.add(hand);
+
  return {arm,hand,active:false};
 }
 
@@ -386,6 +401,7 @@ for(let i=0;i<2;i++){
   ]),
   new THREE.LineBasicMaterial({color:0xff263f})
  );
+
  controller.add(laser);
 
  controller.addEventListener("select",()=>{
@@ -443,39 +459,37 @@ function checkController(controller){
 }
 
 // ===================================
-// HEIGHT CALIBRATION PANEL
+// AUTOMATIC HEIGHT CALIBRATION
+// NO FLOOR TOUCHING REQUIRED
 // ===================================
-
-const calibrationPanel=new THREE.Mesh(
- new THREE.PlaneGeometry(1.8,.45),
- new THREE.MeshBasicMaterial({
-  map:makeText("TOUCH A CONTROLLER TO THE FLOOR","#ff4055")
- })
-);
-
-scene.add(calibrationPanel);
-calibrationPanel.visible=false;
 
 let calibrated=false;
 let playerHeight=1.6;
+let calibrationAttempts=0;
 
-function updateCalibrationText(message){
- if(calibrationPanel.material.map)calibrationPanel.material.map.dispose();
- calibrationPanel.material.map=makeText(message,"#ff4055");
- calibrationPanel.material.needsUpdate=true;
-}
+function calibrateHeight(){
+ if(calibrated || !renderer.xr.isPresenting)return;
 
-function positionCalibrationPanel(){
  const view=renderer.xr.getCamera(camera);
- const pos=new THREE.Vector3();
- const dir=new THREE.Vector3();
+ view.getWorldPosition(headPosition);
 
- view.getWorldPosition(pos);
- view.getWorldDirection(dir);
+ const measuredHeight=headPosition.y-playerRig.position.y;
 
- calibrationPanel.position.copy(pos).addScaledVector(dir,1.5);
- calibrationPanel.position.y=pos.y;
- calibrationPanel.lookAt(pos);
+ if(measuredHeight>.5 && measuredHeight<3){
+  playerHeight=THREE.MathUtils.clamp(measuredHeight,1.0,2.3);
+  calibrated=true;
+
+  setStatus("VR READY — HEIGHT SET: "+playerHeight.toFixed(2)+" METERS");
+  return;
+ }
+
+ calibrationAttempts++;
+
+ if(calibrationAttempts>120){
+  playerHeight=1.6;
+  calibrated=true;
+  setStatus("VR READY — DEFAULT HEIGHT SET");
+ }
 }
 
 // ===================================
@@ -510,56 +524,22 @@ document.getElementById("enter").addEventListener("click",async()=>{
 
   calibrated=false;
   playerHeight=1.6;
-
-  calibrationPanel.visible=true;
-  updateCalibrationText("TOUCH A CONTROLLER TO THE FLOOR");
-  positionCalibrationPanel();
+  calibrationAttempts=0;
 
   document.getElementById("enter").style.display="none";
-  setStatus("HEIGHT CALIBRATION — TOUCH A CONTROLLER TO THE FLOOR");
+  setStatus("REDLINE ARENA — ENTERING VR");
 
   session.addEventListener("end",()=>{
    computer.visible=false;
-   calibrationPanel.visible=false;
    document.getElementById("enter").style.display="block";
    setStatus("REDLINE ARENA — READY");
   });
 
  }catch(error){
+  console.error("VR error:",error);
   setStatus("VR ERROR: "+error.message);
  }
 });
-
-// ===================================
-// HEIGHT DETECTION
-// ===================================
-
-const worldHand=new THREE.Vector3();
-
-function calibrateHeight(){
- if(calibrated || !renderer.xr.isPresenting)return;
-
- const view=renderer.xr.getCamera(camera);
- view.getWorldPosition(headPosition);
-
- for(const controller of controllers){
-  controller.getWorldPosition(worldHand);
-
-  if(worldHand.y<=.14){
-   const floorY=worldHand.y;
-   const measuredHeight=headPosition.y-floorY;
-
-   playerRig.position.y-=floorY;
-
-   playerHeight=THREE.MathUtils.clamp(measuredHeight,1.0,2.3);
-   calibrated=true;
-   calibrationPanel.visible=false;
-
-   setStatus("HEIGHT CALIBRATED: "+playerHeight.toFixed(2)+" METERS");
-   return;
-  }
- }
-}
 
 // ===================================
 // WALKING, JUMPING AND COLLISION
@@ -598,6 +578,7 @@ function movePlayer(delta){
 
   if(source.handedness==="left"){
    const axes=source.gamepad.axes;
+
    if(axes.length>=2){
     stickX=axes[axes.length-2]||0;
     stickY=axes[axes.length-1]||0;
@@ -606,6 +587,7 @@ function movePlayer(delta){
 
   if(source.handedness==="right"){
    const buttons=source.gamepad.buttons;
+
    jumpDown=!!(
     (buttons[4] && buttons[4].pressed) ||
     (buttons[3] && buttons[3].pressed)
@@ -637,6 +619,7 @@ function movePlayer(delta){
  jumpWasDown=jumpDown;
 
  const oldFeetY=playerRig.position.y;
+
  verticalVelocity-=gravity*delta;
  playerRig.position.y+=verticalVelocity*delta;
 
@@ -724,7 +707,6 @@ renderer.setAnimationLoop(()=>{
 
  if(renderer.xr.isPresenting){
   if(!calibrated){
-   positionCalibrationPanel();
    calibrateHeight();
   }
 
@@ -759,7 +741,10 @@ window.addEventListener("resize",()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 
-// Firebase status check
+// ===================================
+// FIREBASE CONNECTION CHECK
+// ===================================
+
 authReady.catch(error=>{
  console.error("Firebase is not ready:",error);
 });
