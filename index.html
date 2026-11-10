@@ -398,8 +398,6 @@ face.scale.set(1.05,1.05,.45);
 scene.add(face);
 
 // Eyes
-const eyes=[];
-
 for(let i=0;i<2;i++){
  const eye=new THREE.Mesh(
   new THREE.SphereGeometry(.045,16,12),
@@ -407,7 +405,6 @@ for(let i=0;i<2;i++){
  );
  eye.position.set(i===0?-.075:.075,.025,-.075);
  face.add(eye);
- eyes.push(eye);
 }
 
 // Chest patch
@@ -444,7 +441,6 @@ function makeArm(){
   bodyMaterial
  );
 
- // Two glowing red lava bands around each arm
  const bands=[];
 
  for(let i=0;i<2;i++){
@@ -761,19 +757,16 @@ function updateBody(){
  const view=renderer.xr.getCamera(camera);
  view.getWorldPosition(headPosition);
 
- // Position the torso below the player's head
  torso.position.copy(headPosition);
  torso.position.y-=playerHeight*.37;
  torso.scale.y=1.3*(playerHeight/1.6);
 
- // Head and face
  head.position.copy(headPosition);
  head.position.y-=.22;
 
  face.position.copy(head.position);
  face.position.z-=.16;
 
- // Chest patch and small lava marks
  chest.position.copy(torso.position);
  chest.position.z-=.22;
 
@@ -789,7 +782,6 @@ function updateBody(){
   torso.position.z-.305
  );
 
- // Normal-sized arms for regular players
  for(let i=0;i<2;i++){
   const controller=controllers[i];
   const arm=arms[i];
@@ -805,7 +797,6 @@ function updateBody(){
 
   arm.hand.position.copy(handPosition);
 
-  // Place the glowing red bands around each arm
   const direction=new THREE.Vector3()
    .subVectors(handPosition,shoulder);
 
